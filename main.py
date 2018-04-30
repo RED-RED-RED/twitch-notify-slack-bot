@@ -2,28 +2,34 @@ import requests
 import configparser
 import time
 
-clientinfo = {}
+settings = {}
 streams_current = {}
 
-def main():
-    configfile = 'bot.ini'
+def read_config(configfile):
     config = configparser.ConfigParser()
     config.read(configfile)
 
     # TODO: if we want to do more than access stream objects, baseurl should
     # be pointed at just api.twitch.tv and another variable added to control
     # which part of the API to go to (streams, channels, users, etc)
-    clientinfo['baseurl'] = config['client']['baseurl']
-    clientinfo['client-id'] = config['client']['client-id']
-    clientinfo['usernames'] = [e.strip() for e in config['client']['usernames'].split(',')]
-    clientinfo['slack_webhook'] = config['client']['slack_webhook']
-    clientinfo['discord_webhook'] = config['client']['discord_webhook']
+    info = {}
+    info['check_every'] = float(config['client']['check_every'] or "10")
+    info['baseurl'] = config['client']['baseurl']
+    info['client-id'] = config['client']['client-id']
+    info['usernames'] = [e.strip() for e in config['client']['usernames'].split(',')]
+    info['slack_webhook'] = config['client']['slack_webhook']
+    info['discord_webhook'] = config['client']['discord_webhook']
+    return info
 
+def main():
+    global settings
     starttime = time.time()
 
     while True:
+        settings = read_config('bot.ini')
         mainloop()
-        time.sleep(60.0 - ((time.time() - starttime) % 60.0))
+        delay = settings['check_every']
+        time.sleep(delay - ((time.time() - starttime) % delay))
 
 def mainloop():
     print("running main loop")
@@ -44,12 +50,12 @@ def mainloop():
     
 def get_streams():
     streams = {}
-    headers = {'Client-ID': clientinfo['client-id']}
+    headers = {'Client-ID': settings['client-id']}
 
-    for user in clientinfo['usernames']:
+    for user in settings['usernames']:
         print("Checking {}".format(user))
         # note: the API url is something like: api.twitch.tv/kraken/streams/hannibal127
-        r = requests.get(clientinfo['baseurl'] + user, headers=headers)
+        r = requests.get(settings['baseurl'] + user, headers=headers)
         res = r.json()
 
         print(res)
@@ -105,8 +111,8 @@ def announce_streams(streamids_changed, streams_current, streams_new):
                 ]
         }
 
-        p = requests.post(clientinfo['slack_webhook'], json=payload)
-        q = requests.post(clientinfo['discord_webhook'], json=payload)
+        p = requests.post(settings['slack_webhook'], json=payload)
+        q = requests.post(settings['discord_webhook'], json=payload)
 
     for streamid in streamids_changed['offline']:
         ann_text = "{} stopped streaming on Twitch.".format(streams_current[streamid]['username'])
@@ -124,8 +130,8 @@ def announce_streams(streamids_changed, streams_current, streams_new):
                     }
                 ]
         }
-        p = requests.post(clientinfo['slack_webhook'], json=payload)
-        q = requests.post(clientinfo['discord_webhook'], json=payload)
+        p = requests.post(settings['slack_webhook'], json=payload)
+        q = requests.post(settings['discord_webhook'], json=payload)
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,6 @@
 [client]
+# Check every N seconds.
+check_every = 10
 # Twitch API base URL
 baseurl = https://api.twitch.tv/kraken/streams/
 # Twitch client id you need to obtain

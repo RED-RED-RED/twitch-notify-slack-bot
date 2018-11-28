@@ -1,4 +1,4 @@
-# twitch slack notification bot
+# Twitch Notification Bot
 
 This is a simple bot that notifies your Slack and Discord channel(s) when people start
 streaming on Twitch. 
